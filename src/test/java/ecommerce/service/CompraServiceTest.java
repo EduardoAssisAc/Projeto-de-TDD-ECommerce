@@ -14,20 +14,19 @@ import ecommerce.entity.ItemCompra;
 import ecommerce.entity.Produto;
 import ecommerce.entity.TipoProduto;
 
-public class CompraServiceTest
-{
+public class CompraServiceTest {
 	@Test
-	public void calcularCustoTotal()
-	{
+	public void calcularCustoTotal() {
 		CompraService service = new CompraService(null, null, null, null);
 
 		CarrinhoDeCompras carrinho = new CarrinhoDeCompras();
 
 		List<ItemCompra> itens = new ArrayList<>();
 
-		Produto produto = new Produto(1l, "Nome_Produto", "Descrição_Produto", BigDecimal.valueOf(10l), null, null, null, null, false, TipoProduto.ALIMENTO);
+		Produto produto = new Produto(1l, "Nome_Produto", "Descrição_Produto", BigDecimal.valueOf(10l), null, null,
+				null, null, false, TipoProduto.ALIMENTO);
 		ItemCompra item1 = new ItemCompra(1l, produto, 1l);
-		
+
 		itens.add(item1);
 		carrinho.setItens(itens);
 
@@ -44,5 +43,30 @@ public class CompraServiceTest
 		// O método isEqualByComparingTo não leva em conta escala
 		// e não precisa instanciar um BigDecimal para fazer a comparação
 		assertThat(custoTotal).as("Custo Total da Compra").isEqualByComparingTo("10.0");
+	}
+
+	@Test
+	public void calcularSubTotalSimples() {
+		CompraService service = new CompraService(null, null, null, null);
+
+		CarrinhoDeCompras carrinho = new CarrinhoDeCompras();
+		List<ItemCompra> itens = new ArrayList<>();
+
+		Produto arroz = new Produto(1L, "Arroz", "Arroz 5kg", new BigDecimal("50.00"), null, null, null, null, false,
+				TipoProduto.ALIMENTO);
+
+		ItemCompra item1 = new ItemCompra(1L, arroz, 2L);
+
+		Produto fone = new Produto(2L, "Fone", "Fone de ouvido", new BigDecimal("100.00"), null, null, null, null, false, TipoProduto.ELETRONICO);
+
+		ItemCompra item2 = new ItemCompra(2L, fone, 1L);
+
+		itens.add(item1);
+		itens.add(item2);
+		carrinho.setItens(itens);
+
+		BigDecimal custoProdutos = service.calcularCustoProdutos(carrinho);
+
+		assertThat(custoProdutos).as("Custo dos produtos sem descontos").isEqualByComparingTo("200.00");
 	}
 }
