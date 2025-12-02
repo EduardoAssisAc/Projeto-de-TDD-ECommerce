@@ -109,7 +109,7 @@ public class CompraServiceTest {
 		CarrinhoDeCompras carrinho = new CarrinhoDeCompras();
 		List<ItemCompra> itens = new ArrayList<>();
 
-		Produto tv = new Produto(1L, "TV", "TV 50\"",
+		Produto tv = new Produto(1L, "TV", "TV 50 polegadas",
 				new BigDecimal("200.00"), null, null, null, null, false, TipoProduto.ELETRONICO);
 		ItemCompra item = new ItemCompra(1L, tv, 8L);
 
