@@ -57,7 +57,8 @@ public class CompraServiceTest {
 
 		ItemCompra item1 = new ItemCompra(1L, arroz, 2L);
 
-		Produto fone = new Produto(2L, "Fone", "Fone de ouvido", new BigDecimal("100.00"), null, null, null, null, false, TipoProduto.ELETRONICO);
+		Produto fone = new Produto(2L, "Fone", "Fone de ouvido", new BigDecimal("100.00"), null, null, null, null,
+				false, TipoProduto.ELETRONICO);
 
 		ItemCompra item2 = new ItemCompra(2L, fone, 1L);
 
@@ -69,4 +70,36 @@ public class CompraServiceTest {
 
 		assertThat(custoProdutos).as("Custo dos produtos sem descontos").isEqualByComparingTo("200.00");
 	}
+
+	@Test
+	public void calcularCustoProdutosAoAplicarDescontoPorTipo() {
+		CompraService service = new CompraService(null, null, null, null);
+
+		CarrinhoDeCompras carrinho = new CarrinhoDeCompras();
+		List<ItemCompra> itens = new ArrayList<>();
+
+		Produto livroA = new Produto(1L, "Livro A", "Livro A",
+				new BigDecimal("50.00"), null, null, null, null, false, TipoProduto.LIVRO);
+		Produto livroB = new Produto(2L, "Livro B", "Livro B",
+				new BigDecimal("50.00"), null, null, null, null, false, TipoProduto.LIVRO);
+
+		ItemCompra item1 = new ItemCompra(1L, livroA, 3L);
+		ItemCompra item2 = new ItemCompra(2L, livroB, 2L);
+
+		Produto fone = new Produto(3L, "Fone", "Fone de ouvido", new BigDecimal("100.00"), null, null, null, null,
+				false, TipoProduto.ELETRONICO);
+		ItemCompra item3 = new ItemCompra(3L, fone, 1L);
+
+		itens.add(item1);
+		itens.add(item2);
+		itens.add(item3);
+		carrinho.setItens(itens);
+
+		BigDecimal custoProdutos = service.calcularCustoProdutos(carrinho);
+
+		assertThat(custoProdutos)
+				.as("Custo dos produtos com desconto por tipo")
+				.isEqualByComparingTo("325.00");
+	}
+
 }
