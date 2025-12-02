@@ -102,4 +102,25 @@ public class CompraServiceTest {
 				.isEqualByComparingTo("325.00");
 	}
 
+	@Test
+	public void calcularCustoProdutosAoAplicarDescontoPorValorTotalDoCarrinho() {
+		CompraService service = new CompraService(null, null, null, null);
+
+		CarrinhoDeCompras carrinho = new CarrinhoDeCompras();
+		List<ItemCompra> itens = new ArrayList<>();
+
+		Produto tv = new Produto(1L, "TV", "TV 50\"",
+				new BigDecimal("200.00"), null, null, null, null, false, TipoProduto.ELETRONICO);
+		ItemCompra item = new ItemCompra(1L, tv, 8L);
+
+		itens.add(item);
+		carrinho.setItens(itens);
+
+		BigDecimal custoProdutos = service.calcularCustoProdutos(carrinho);
+
+		assertThat(custoProdutos)
+				.as("Custo dos produtos com desconto por valor total")
+				.isEqualByComparingTo("1088.00");
+	}
+
 }
