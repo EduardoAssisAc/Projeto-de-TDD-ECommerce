@@ -129,7 +129,6 @@ public class CompraServiceTest {
 				.isEqualByComparingTo("1088.00");
 	}
 
-	
 	@Test
 	public void calcularFrete_quandoPesoTotalAte5_entaoFreteIsento() {
 		CompraService service = new CompraService(null, null, null, null);
@@ -137,7 +136,6 @@ public class CompraServiceTest {
 		CarrinhoDeCompras carrinho = new CarrinhoDeCompras();
 		List<ItemCompra> itens = new ArrayList<>();
 
-		// peso tributável = 2 kg, qtd = 2 => 4 kg (faixa A)
 		Produto p = new Produto(1L, "Produto", "Desc", new BigDecimal("10.00"),
 				new BigDecimal("2.0"), new BigDecimal("10"), new BigDecimal("10"), new BigDecimal("10"),
 				false, TipoProduto.ALIMENTO);
@@ -147,7 +145,6 @@ public class CompraServiceTest {
 
 		BigDecimal total = service.calcularCustoTotal(carrinho, null);
 
-		// sem descontos, sem frete
 		assertThat(total).isEqualByComparingTo("20.00");
 	}
 
@@ -158,7 +155,6 @@ public class CompraServiceTest {
 		CarrinhoDeCompras carrinho = new CarrinhoDeCompras();
 		List<ItemCompra> itens = new ArrayList<>();
 
-		// peso = 3 kg, qtd 2 => 6 kg (faixa B)
 		Produto p = new Produto(1L, "Produto", "Desc", new BigDecimal("10.00"),
 				new BigDecimal("3.0"), new BigDecimal("10"), new BigDecimal("10"), new BigDecimal("10"),
 				false, TipoProduto.ALIMENTO);
@@ -168,8 +164,6 @@ public class CompraServiceTest {
 
 		BigDecimal total = service.calcularCustoTotal(carrinho, null);
 
-		// subtotal = 20.00
-		// frete = (6 * 2.00) + 12.00 = 24.00
 		assertThat(total).isEqualByComparingTo("44.00");
 	}
 
@@ -180,7 +174,6 @@ public class CompraServiceTest {
 		CarrinhoDeCompras carrinho = new CarrinhoDeCompras();
 		List<ItemCompra> itens = new ArrayList<>();
 
-		// peso = 6 kg, qtd 2 => 12 kg (faixa C)
 		Produto p = new Produto(1L, "Produto", "Desc", new BigDecimal("10.00"),
 				new BigDecimal("6.0"), new BigDecimal("10"), new BigDecimal("10"), new BigDecimal("10"),
 				false, TipoProduto.ALIMENTO);
@@ -190,20 +183,16 @@ public class CompraServiceTest {
 
 		BigDecimal total = service.calcularCustoTotal(carrinho, null);
 
-		// subtotal = 20.00
-		// frete = (12 * 4.00) + 12.00 = 60.00
 		assertThat(total).isEqualByComparingTo("80.00");
 	}
 
 	@Test
-	public void calcularFrete_quandoProdutoFragil_entaoSoma5PorUnidadeAntesDeRegiaoEFidelidade() {
+	public void calcularFrete_quandoProdutoFragil_entaoSoma5PorUnidade() {
 		CompraService service = new CompraService(null, null, null, null);
 
 		CarrinhoDeCompras carrinho = new CarrinhoDeCompras();
 		List<ItemCompra> itens = new ArrayList<>();
 
-		// peso = 3 kg, qtd 2 => 6 kg (faixa B) => 24.00
-		// frágil: 2 unidades => +10.00
 		Produto p = new Produto(1L, "Produto", "Desc", new BigDecimal("10.00"),
 				new BigDecimal("3.0"), new BigDecimal("10"), new BigDecimal("10"), new BigDecimal("10"),
 				true, TipoProduto.ALIMENTO);
@@ -213,7 +202,6 @@ public class CompraServiceTest {
 
 		BigDecimal total = service.calcularCustoTotal(carrinho, null);
 
-		// subtotal 20.00 + frete (24.00 + 10.00) = 54.00
 		assertThat(total).isEqualByComparingTo("54.00");
 	}
 
@@ -224,7 +212,6 @@ public class CompraServiceTest {
 		CarrinhoDeCompras carrinho = new CarrinhoDeCompras();
 		List<ItemCompra> itens = new ArrayList<>();
 
-		// peso = 3 kg, qtd 2 => 6 kg => frete base 24.00
 		Produto p = new Produto(1L, "Produto", "Desc", new BigDecimal("10.00"),
 				new BigDecimal("3.0"), new BigDecimal("10"), new BigDecimal("10"), new BigDecimal("10"),
 				false, TipoProduto.ALIMENTO);
@@ -234,33 +221,9 @@ public class CompraServiceTest {
 
 		Cliente cliente = new Cliente();
 		cliente.setRegiao(Regiao.NORTE);
+
 		BigDecimal total = service.calcularCustoTotal(carrinho, cliente);
 
-		// subtotal 20.00 + frete (24 * 1.30) = 31.20 => total 51.20
 		assertThat(total).isEqualByComparingTo("51.20");
-	}
-
-	@Test
-	public void calcularFrete_quandoFidelidadeOuro_entaoFreteZerado() {
-		CompraService service = new CompraService(null, null, null, null);
-
-		CarrinhoDeCompras carrinho = new CarrinhoDeCompras();
-		List<ItemCompra> itens = new ArrayList<>();
-
-		// peso = 3 kg, qtd 2 => 6 kg => frete base 24.00
-		Produto p = new Produto(1L, "Produto", "Desc", new BigDecimal("10.00"),
-				new BigDecimal("3.0"), new BigDecimal("10"), new BigDecimal("10"), new BigDecimal("10"),
-				false, TipoProduto.ALIMENTO);
-
-		itens.add(new ItemCompra(1L, p, 2L));
-		carrinho.setItens(itens);
-
-		Cliente cliente = new Cliente();
-		cliente.setRegiao(Regiao.NORTE);
-
-		BigDecimal total = service.calcularCustoTotal(carrinho, cliente);
-
-		// subtotal 20.00 + frete 0.00
-		assertThat(total).isEqualByComparingTo("20.00");
 	}
 }

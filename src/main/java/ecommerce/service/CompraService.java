@@ -92,7 +92,6 @@ public class CompraService {
 		BigDecimal freteFinal = calcularFreteFinal(carrinho, cliente);
 
 		BigDecimal total = subtotalComDescontos.add(freteFinal);
-
 		return total.setScale(2, RoundingMode.HALF_UP);
 	}
 
@@ -102,7 +101,6 @@ public class CompraService {
 
 		return totalComDescontoPorValor;
 	}
-
 
 	private BigDecimal calcularTotalComDescontoPorValor(BigDecimal total) {
 		BigDecimal desconto = percentualDescontoValorTotal(total);
@@ -130,13 +128,19 @@ public class CompraService {
 	}
 
 	private BigDecimal aplicarDesconto(BigDecimal valor, BigDecimal desconto) {
-		if (valor == null) return ZERO;
-		if (desconto == null) return valor;
+		if (valor == null)
+			return ZERO;
+		if (desconto == null)
+			return valor;
 		return valor.subtract(valor.multiply(desconto));
 	}
 
 	private Map<TipoProduto, Entry<BigDecimal, Long>> acumularPorTipo(CarrinhoDeCompras carrinho) {
 		Map<TipoProduto, Entry<BigDecimal, Long>> acumulados = new HashMap<>();
+
+		if (carrinho == null || carrinho.getItens() == null) {
+			return acumulados;
+		}
 
 		for (ItemCompra item : carrinho.getItens()) {
 			Produto produto = item.getProduto();
@@ -174,12 +178,12 @@ public class CompraService {
 	}
 
 	private BigDecimal percentualDescontoValorTotal(BigDecimal total) {
-		if (total == null) return ZERO;
+		if (total == null)
+			return ZERO;
 
 		BigDecimal mil = new BigDecimal("1000.00");
 		BigDecimal quinhentos = new BigDecimal("500.00");
 
-		// backlog: >= 1000 => 20%, >= 500 && < 1000 => 10%
 		if (total.compareTo(mil) >= 0) {
 			return new BigDecimal("0.20");
 		}
@@ -188,7 +192,6 @@ public class CompraService {
 		}
 		return ZERO;
 	}
-
 
 	private BigDecimal calcularFreteFinal(CarrinhoDeCompras carrinho, Cliente cliente) {
 		BigDecimal pesoTotal = calcularPesoTotalDaCompra(carrinho);
@@ -201,11 +204,14 @@ public class CompraService {
 		BigDecimal multiplicador = multiplicadorPorRegiao(cliente);
 		BigDecimal freteFinal = freteComTaxas.multiply(multiplicador);
 
-
-		return freteFinal;
+		return freteFinal.setScale(2, RoundingMode.HALF_UP);
 	}
 
 	private BigDecimal calcularPesoTotalDaCompra(CarrinhoDeCompras carrinho) {
+		if (carrinho == null || carrinho.getItens() == null) {
+			return ZERO;
+		}
+
 		BigDecimal total = ZERO;
 
 		for (ItemCompra item : carrinho.getItens()) {
@@ -225,10 +231,9 @@ public class CompraService {
 		BigDecimal largura = nvl(produto.getLargura(), ZERO);
 		BigDecimal altura = nvl(produto.getAltura(), ZERO);
 
-		// peso_cubico = (c * l * a) / 6000
 		BigDecimal volume = comprimento.multiply(largura).multiply(altura);
-		BigDecimal pesoCubico = ZERO;
 
+		BigDecimal pesoCubico = ZERO;
 		if (DIVISOR_PESO_CUBICO.compareTo(ZERO) > 0) {
 			pesoCubico = volume.divide(DIVISOR_PESO_CUBICO, 10, RoundingMode.HALF_UP);
 		}
@@ -237,32 +242,34 @@ public class CompraService {
 	}
 
 	private BigDecimal calcularFretePorFaixaDePeso(BigDecimal pesoTotal) {
-		if (pesoTotal == null) return ZERO;
+		if (pesoTotal == null)
+			return ZERO;
 
-		// A: 0–5 kg => 0
 		if (pesoTotal.compareTo(new BigDecimal("5")) <= 0) {
 			return ZERO;
 		}
 
 		BigDecimal frete;
-		// B: > 5 e <= 10 => 2/kg
+
 		if (pesoTotal.compareTo(new BigDecimal("10")) <= 0) {
 			frete = pesoTotal.multiply(new BigDecimal("2.00"));
 			return frete.add(TAXA_MINIMA_FRETE);
 		}
 
-		// C: > 10 e <= 50 => 4/kg
 		if (pesoTotal.compareTo(new BigDecimal("50")) <= 0) {
 			frete = pesoTotal.multiply(new BigDecimal("4.00"));
 			return frete.add(TAXA_MINIMA_FRETE);
 		}
 
-		// D: > 50 => 7/kg
 		frete = pesoTotal.multiply(new BigDecimal("7.00"));
 		return frete.add(TAXA_MINIMA_FRETE);
 	}
 
 	private BigDecimal calcularTaxaFragil(CarrinhoDeCompras carrinho) {
+		if (carrinho == null || carrinho.getItens() == null) {
+			return ZERO;
+		}
+
 		long unidadesFragil = 0;
 
 		for (ItemCompra item : carrinho.getItens()) {
@@ -286,7 +293,7 @@ public class CompraService {
 			case "NORDESTE" -> new BigDecimal("1.10");
 			case "CENTRO-OESTE", "CENTRO_OESTE" -> new BigDecimal("1.20");
 			case "NORTE" -> new BigDecimal("1.30");
-			default -> new BigDecimal("1.00"); // SUDESTE
+			default -> new BigDecimal("1.00");
 		};
 	}
 
@@ -295,8 +302,10 @@ public class CompraService {
 	}
 
 	private static BigDecimal max(BigDecimal a, BigDecimal b) {
-		if (a == null) return b;
-		if (b == null) return a;
+		if (a == null)
+			return b;
+		if (b == null)
+			return a;
 		return a.compareTo(b) >= 0 ? a : b;
 	}
 }
