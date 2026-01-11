@@ -19,6 +19,8 @@ import ecommerce.entity.CarrinhoDeCompras;
 import ecommerce.entity.Cliente;
 import ecommerce.entity.ItemCompra;
 import ecommerce.entity.Produto;
+import ecommerce.entity.Regiao;
+import ecommerce.entity.TipoCliente;
 import ecommerce.entity.TipoProduto;
 import ecommerce.external.IEstoqueExternal;
 import ecommerce.external.IPagamentoExternal;
@@ -60,7 +62,7 @@ public class CompraService {
 				.collect(Collectors.toList());
 
 		List<Long> produtosQtds = carrinho.getItens().stream()
-				.map(i -> i.getQuantidade())
+				.map(ItemCompra::getQuantidade)
 				.collect(Collectors.toList());
 
 		DisponibilidadeDTO disponibilidade = estoqueExternal.verificarDisponibilidade(produtosIds, produtosQtds);
@@ -88,6 +90,8 @@ public class CompraService {
 	}
 
 	public BigDecimal calcularCustoTotal(CarrinhoDeCompras carrinho, Cliente cliente) {
+		validarEntradaParaCalculo(carrinho, cliente);
+
 		BigDecimal subtotalComDescontos = calcularCustoProdutos(carrinho);
 		BigDecimal freteFinal = calcularFreteFinal(carrinho, cliente);
 
@@ -96,6 +100,8 @@ public class CompraService {
 	}
 
 	BigDecimal calcularCustoProdutos(CarrinhoDeCompras carrinho) {
+		validarCarrinhoParaCalculo(carrinho);
+
 		BigDecimal totalComDescontoPorTipo = calcularTotalComDescontoPorTipo(carrinho);
 		BigDecimal totalComDescontoPorValor = calcularTotalComDescontoPorValor(totalComDescontoPorTipo);
 
@@ -138,10 +144,6 @@ public class CompraService {
 	private Map<TipoProduto, Entry<BigDecimal, Long>> acumularPorTipo(CarrinhoDeCompras carrinho) {
 		Map<TipoProduto, Entry<BigDecimal, Long>> acumulados = new HashMap<>();
 
-		if (carrinho == null || carrinho.getItens() == null) {
-			return acumulados;
-		}
-
 		for (ItemCompra item : carrinho.getItens()) {
 			Produto produto = item.getProduto();
 			BigDecimal preco = produto.getPreco();
@@ -165,15 +167,12 @@ public class CompraService {
 	}
 
 	private BigDecimal percentualDescontoPorQuantidade(Long quantidade) {
-		if (quantidade >= 8) {
+		if (quantidade >= 8)
 			return new BigDecimal("0.15");
-		}
-		if (quantidade >= 5) {
+		if (quantidade >= 5)
 			return new BigDecimal("0.10");
-		}
-		if (quantidade >= 3) {
+		if (quantidade >= 3)
 			return new BigDecimal("0.05");
-		}
 		return ZERO;
 	}
 
@@ -184,11 +183,14 @@ public class CompraService {
 		BigDecimal mil = new BigDecimal("1000.00");
 		BigDecimal quinhentos = new BigDecimal("500.00");
 
-		if (total.compareTo(mil) >= 0) {
-			return new BigDecimal("0.20");
-		}
-		if (total.compareTo(quinhentos) >= 0 && total.compareTo(mil) < 0) {
+		boolean gt500 = total.compareTo(quinhentos) > 0;
+		boolean le1000 = total.compareTo(mil) <= 0;
+
+		if (gt500 && le1000) {
 			return new BigDecimal("0.10");
+		}
+		if (total.compareTo(mil) > 0) {
+			return new BigDecimal("0.20");
 		}
 		return ZERO;
 	}
@@ -201,17 +203,26 @@ public class CompraService {
 
 		BigDecimal freteComTaxas = freteBase.add(adicionalFragil);
 
-		BigDecimal multiplicador = multiplicadorPorRegiao(cliente);
-		BigDecimal freteFinal = freteComTaxas.multiply(multiplicador);
+		BigDecimal multiplicador = multiplicadorPorRegiao(cliente.getRegiao());
+		BigDecimal freteRegional = freteComTaxas.multiply(multiplicador);
 
-		return freteFinal.setScale(2, RoundingMode.HALF_UP);
+		BigDecimal freteComFidelidade = aplicarFidelidadeNoFrete(freteRegional, cliente.getTipo());
+
+		return freteComFidelidade;
+	}
+
+	private BigDecimal aplicarFidelidadeNoFrete(BigDecimal frete, TipoCliente tipoCliente) {
+		if (frete == null)
+			return ZERO;
+
+		return switch (tipoCliente) {
+			case OURO -> ZERO;
+			case PRATA -> frete.multiply(new BigDecimal("0.50"));
+			case BRONZE -> frete;
+		};
 	}
 
 	private BigDecimal calcularPesoTotalDaCompra(CarrinhoDeCompras carrinho) {
-		if (carrinho == null || carrinho.getItens() == null) {
-			return ZERO;
-		}
-
 		BigDecimal total = ZERO;
 
 		for (ItemCompra item : carrinho.getItens()) {
@@ -226,17 +237,13 @@ public class CompraService {
 	}
 
 	private BigDecimal calcularPesoTributavel(Produto produto) {
-		BigDecimal pesoFisico = nvl(produto.getPesoFisico(), ZERO);
-		BigDecimal comprimento = nvl(produto.getComprimento(), ZERO);
-		BigDecimal largura = nvl(produto.getLargura(), ZERO);
-		BigDecimal altura = nvl(produto.getAltura(), ZERO);
+		BigDecimal pesoFisico = produto.getPesoFisico();
+		BigDecimal comprimento = produto.getComprimento();
+		BigDecimal largura = produto.getLargura();
+		BigDecimal altura = produto.getAltura();
 
 		BigDecimal volume = comprimento.multiply(largura).multiply(altura);
-
-		BigDecimal pesoCubico = ZERO;
-		if (DIVISOR_PESO_CUBICO.compareTo(ZERO) > 0) {
-			pesoCubico = volume.divide(DIVISOR_PESO_CUBICO, 10, RoundingMode.HALF_UP);
-		}
+		BigDecimal pesoCubico = volume.divide(DIVISOR_PESO_CUBICO, 10, RoundingMode.HALF_UP);
 
 		return max(pesoFisico, pesoCubico);
 	}
@@ -245,18 +252,18 @@ public class CompraService {
 		if (pesoTotal == null)
 			return ZERO;
 
-		if (pesoTotal.compareTo(new BigDecimal("5")) <= 0) {
+		if (pesoTotal.compareTo(new BigDecimal("5.00")) <= 0) {
 			return ZERO;
 		}
 
 		BigDecimal frete;
 
-		if (pesoTotal.compareTo(new BigDecimal("10")) <= 0) {
+		if (pesoTotal.compareTo(new BigDecimal("10.00")) <= 0) {
 			frete = pesoTotal.multiply(new BigDecimal("2.00"));
 			return frete.add(TAXA_MINIMA_FRETE);
 		}
 
-		if (pesoTotal.compareTo(new BigDecimal("50")) <= 0) {
+		if (pesoTotal.compareTo(new BigDecimal("50.00")) <= 0) {
 			frete = pesoTotal.multiply(new BigDecimal("4.00"));
 			return frete.add(TAXA_MINIMA_FRETE);
 		}
@@ -266,14 +273,11 @@ public class CompraService {
 	}
 
 	private BigDecimal calcularTaxaFragil(CarrinhoDeCompras carrinho) {
-		if (carrinho == null || carrinho.getItens() == null) {
-			return ZERO;
-		}
-
 		long unidadesFragil = 0;
 
 		for (ItemCompra item : carrinho.getItens()) {
-			if (item.getProduto().isFragil()) {
+			Produto p = item.getProduto();
+			if (Boolean.TRUE.equals(p.isFragil())) {
 				unidadesFragil += item.getQuantidade();
 			}
 		}
@@ -281,24 +285,89 @@ public class CompraService {
 		return TAXA_FRAGIL_POR_UNIDADE.multiply(BigDecimal.valueOf(unidadesFragil));
 	}
 
-	private BigDecimal multiplicadorPorRegiao(Cliente cliente) {
-		if (cliente == null || cliente.getRegiao() == null) {
+	private BigDecimal multiplicadorPorRegiao(Regiao regiao) {
+		if (regiao == null)
 			return new BigDecimal("1.00");
-		}
-
-		String regiao = cliente.getRegiao().toString().toUpperCase();
 
 		return switch (regiao) {
-			case "SUL" -> new BigDecimal("1.05");
-			case "NORDESTE" -> new BigDecimal("1.10");
-			case "CENTRO-OESTE", "CENTRO_OESTE" -> new BigDecimal("1.20");
-			case "NORTE" -> new BigDecimal("1.30");
-			default -> new BigDecimal("1.00");
+			case SUDESTE -> new BigDecimal("1.00");
+			case SUL -> new BigDecimal("1.05");
+			case NORDESTE -> new BigDecimal("1.10");
+			case CENTRO_OESTE -> new BigDecimal("1.20");
+			case NORTE -> new BigDecimal("1.30");
 		};
 	}
 
-	private static BigDecimal nvl(BigDecimal v, BigDecimal padrao) {
-		return v == null ? padrao : v;
+	private void validarEntradaParaCalculo(CarrinhoDeCompras carrinho, Cliente cliente) {
+		validarCarrinhoParaCalculo(carrinho);
+		validarClienteParaCalculo(cliente);
+	}
+
+	private void validarClienteParaCalculo(Cliente cliente) {
+		if (cliente == null) {
+			throw new IllegalArgumentException("Cliente não pode ser nulo.");
+		}
+		if (cliente.getRegiao() == null) {
+			throw new IllegalArgumentException("Região do cliente não pode ser nula.");
+		}
+		if (cliente.getTipo() == null) {
+			throw new IllegalArgumentException("Tipo do cliente não pode ser nulo.");
+		}
+	}
+
+	private void validarCarrinhoParaCalculo(CarrinhoDeCompras carrinho) {
+		if (carrinho == null) {
+			throw new IllegalArgumentException("Carrinho não pode ser nulo.");
+		}
+		if (carrinho.getItens() == null || carrinho.getItens().isEmpty()) {
+			throw new IllegalArgumentException("Carrinho deve possuir pelo menos 1 item.");
+		}
+
+		for (ItemCompra item : carrinho.getItens()) {
+			if (item == null) {
+				throw new IllegalArgumentException("Item do carrinho não pode ser nulo.");
+			}
+
+			Long qtd = item.getQuantidade();
+			if (qtd == null || qtd <= 0) {
+				throw new IllegalArgumentException("Quantidade do item deve ser maior que zero.");
+			}
+
+			Produto produto = item.getProduto();
+			if (produto == null) {
+				throw new IllegalArgumentException("Produto do item não pode ser nulo.");
+			}
+
+			if (produto.getTipo() == null) {
+				throw new IllegalArgumentException("Tipo do produto não pode ser nulo.");
+			}
+
+			BigDecimal preco = produto.getPreco();
+			if (preco == null || preco.compareTo(ZERO) < 0) {
+				throw new IllegalArgumentException("Preço do produto deve ser maior ou igual a zero.");
+			}
+
+			if (produto.getPesoFisico() == null) {
+				throw new IllegalArgumentException("Peso físico do produto não pode ser nulo.");
+			}
+			if (produto.getComprimento() == null || produto.getLargura() == null || produto.getAltura() == null) {
+				throw new IllegalArgumentException("Dimensões do produto não podem ser nulas.");
+			}
+			if (produto.isFragil() == null) {
+				throw new IllegalArgumentException("Flag fragil do produto não pode ser nula.");
+			}
+
+			validarNaoNegativo(produto.getPesoFisico(), "Peso físico do produto deve ser maior ou igual a zero.");
+			validarNaoNegativo(produto.getComprimento(), "Comprimento do produto deve ser maior ou igual a zero.");
+			validarNaoNegativo(produto.getLargura(), "Largura do produto deve ser maior ou igual a zero.");
+			validarNaoNegativo(produto.getAltura(), "Altura do produto deve ser maior ou igual a zero.");
+		}
+	}
+
+	private void validarNaoNegativo(BigDecimal valor, String mensagem) {
+		if (valor != null && valor.compareTo(ZERO) < 0) {
+			throw new IllegalArgumentException(mensagem);
+		}
 	}
 
 	private static BigDecimal max(BigDecimal a, BigDecimal b) {
