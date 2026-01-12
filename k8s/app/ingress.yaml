@@ -1,0 +1,18 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ecommerce
+  namespace: ecommerce
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: app.72.60.13.231.nip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ecommerce
+                port:
+                  number: 80

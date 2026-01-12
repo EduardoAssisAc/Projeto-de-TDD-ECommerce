@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ecommerce
+  namespace: ecommerce
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ecommerce
+  template:
+    metadata:
+      labels:
+        app: ecommerce
+    spec:
+      containers:
+        - name: ecommerce
+          image: ghcr.io/eduardoassisac/projeto-de-tdd-ecommerce:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVER_PORT
+              value: "8080"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
