@@ -78,5 +78,5 @@ jobs:
           kubectl -n ecommerce apply -f k8s/app/deployment.yaml
           kubectl -n ecommerce set image deployment/ecommerce ecommerce=${IMAGE}
 
-          kubectl -n ecommerce rollout status deployment/ecommerce
+          kubectl -n ecommerce rollout status deployment/ecommerce --timeout=180s
           kubectl -n ecommerce get pods,svc,ingress
