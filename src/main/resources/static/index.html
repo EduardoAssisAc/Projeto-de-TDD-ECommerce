@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Projeto DevOps: CI/CD com GitHub Actions, Docker (GHCR) e Kubernetes (k3s), exposto via Ingress e HTTPS." />
+  <title>Projeto DevOps — TDD E-Commerce</title>
+  <style>
+    :root{
+      --bg: #0b0f14;
+      --panel: #111826;
+      --panel-2: #0f172a;
+      --text: #e6edf3;
+      --muted: #9fb0c0;
+      --border: rgba(255,255,255,.10);
+      --accent: #7dd3fc;
+      --accent-2: #a7f3d0;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 16px;
+      --code: #0b1220;
+    }
+
+    *{ box-sizing: border-box; }
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 10% 10%, rgba(125,211,252,.15), transparent 45%),
+                  radial-gradient(1200px 800px at 90% 20%, rgba(167,243,208,.10), transparent 45%),
+                  var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+
+    a{ color: var(--accent); text-decoration: none; }
+    a:hover{ text-decoration: underline; }
+
+    .wrap{
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 28px 18px 64px;
+    }
+
+    header{
+      display:flex;
+      align-items:flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 10px 0 20px;
+    }
+
+    .brand{
+      display:flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .title{
+      font-size: clamp(22px, 2.6vw, 34px);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin:0;
+    }
+
+    .subtitle{
+      margin:0;
+      color: var(--muted);
+      max-width: 62ch;
+    }
+
+    .badges{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .badge{
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    @media (max-width: 880px){
+      .grid{ grid-template-columns: 1fr; }
+      header{ flex-direction: column; }
+      .badges{ justify-content: flex-start; }
+    }
+
+    .card{
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .card h2{
+      margin: 0 0 10px;
+      font-size: 16px;
+      letter-spacing: -0.01em;
+    }
+
+    .muted{ color: var(--muted); }
+
+    ul{
+      margin: 10px 0 0 18px;
+      padding: 0;
+    }
+
+    li{ margin: 6px 0; }
+
+    .steps{
+      display:flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .step{
+      display:flex;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255,255,255,.03);
+    }
+
+    .num{
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      display:grid;
+      place-items:center;
+      font-weight: 700;
+      color: #0b0f14;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      flex: 0 0 auto;
+    }
+
+    .step b{ display:block; font-size: 13px; }
+    .step span{ display:block; color: var(--muted); font-size: 13px; }
+
+    .kv{
+      display:grid;
+      grid-template-columns: 130px 1fr;
+      gap: 10px;
+      margin-top: 10px;
+      align-items: start;
+    }
+
+    .kv div{
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255,255,255,.03);
+      font-size: 13px;
+    }
+
+    .kv .k{ color: var(--muted); }
+
+    code, pre{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+    }
+
+    pre{
+      margin: 10px 0 0;
+      padding: 12px;
+      border-radius: 12px;
+      background: var(--code);
+      border: 1px solid var(--border);
+      overflow:auto;
+      font-size: 12.5px;
+      color: #dce7f2;
+    }
+
+    .actions{
+      display:flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .btn:hover{
+      background: rgba(255,255,255,.07);
+      text-decoration:none;
+    }
+
+    footer{
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12.5px;
+      display:flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <h1 class="title">Projeto DevOps — TDD E-Commerce</h1>
+        <p class="subtitle">
+          Aplicação <b>Java + Spring Boot (Maven)</b> com pipeline de <b>CI/CD</b> completo:
+          build e testes, imagem Docker no <b>GHCR</b>, deploy em <b>Kubernetes (k3s)</b>,
+          exposta via <b>Ingress</b> e <b>HTTPS (Let’s Encrypt)</b>.
+        </p>
+      </div>
+
+      <div class="badges" aria-label="Tecnologias">
+        <span class="badge">Java 17</span>
+        <span class="badge">Spring Boot 3.x</span>
+        <span class="badge">Maven</span>
+        <span class="badge">Docker</span>
+        <span class="badge">GHCR</span>
+        <span class="badge">k3s</span>
+        <span class="badge">ingress-nginx</span>
+        <span class="badge">Nginx + TLS</span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Visão geral</h2>
+        <p class="muted">
+          Este serviço expõe um endpoint de saúde e um endpoint de finalização de compra.
+          O endpoint <code>/health</code> é utilizado por probes do Kubernetes e para validação após deploy.
+        </p>
+
+        <div class="kv" role="list">
+          <div class="k" role="listitem"><b>Health</b></div>
+          <div role="listitem"><code>GET /health</code> → <code>OK</code></div>
+
+          <div class="k" role="listitem"><b>Compra</b></div>
+          <div role="listitem"><code>POST /finalizar?carrinhoId=&lt;id&gt;&amp;clienteId=&lt;id&gt;</code></div>
+        </div>
+
+        <div class="actions">
+          <a class="btn" href="/health" target="_blank" rel="noopener">Abrir /health</a>
+          <a class="btn" href="https://github.com/EduardoAssisAc/Projeto-de-TDD-ECommerce" target="_blank" rel="noopener">
+            Repositório no GitHub
+          </a>
+        </div>
+
+        <h2 style="margin-top:14px;">Fluxo de CI/CD</h2>
+        <div class="steps">
+          <div class="step">
+            <div class="num">1</div>
+            <div>
+              <b>Push na branch main</b>
+              <span>Gatilho do workflow no GitHub Actions.</span>
+            </div>
+          </div>
+          <div class="step">
+            <div class="num">2</div>
+            <div>
+              <b>CI: build + testes</b>
+              <span><code>mvn clean verify</code> (unitários + integração) e geração de artefatos.</span>
+            </div>
+          </div>
+          <div class="step">
+            <div class="num">3</div>
+            <div>
+              <b>Docker: build + push</b>
+              <span>Imagem publicada no GHCR (<code>latest</code> e <code>SHA</code> do commit).</span>
+            </div>
+          </div>
+          <div class="step">
+            <div class="num">4</div>
+            <div>
+              <b>CD: deploy no k3s</b>
+              <span>Apply dos manifests e atualização do Deployment para a imagem do commit.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="card">
+        <h2>Exposição e segurança</h2>
+        <ul class="muted">
+          <li><b>Ingress Controller</b> (ingress-nginx) exposto via NodePort: <code>30080</code>/<code>30443</code></li>
+          <li><b>Nginx</b> na VPS recebe <code>80/443</code> e faz proxy para o Ingress</li>
+          <li><b>DNS gratuito</b> via <code>nip.io</code> (hostname aponta para o IP público)</li>
+          <li><b>HTTPS</b> com <b>Let’s Encrypt</b> (Certbot) no Nginx (SNI por hostname)</li>
+        </ul>
+
+        <h2 style="margin-top:14px;">Comandos úteis</h2>
+        <pre><code># testar saúde (externo)
+curl https://app.72.60.13.231.nip.io/health
+
+# checar recursos no cluster
+kubectl -n ecommerce get pods,svc,ingress
+
+# logs da aplicação
+kubectl -n ecommerce logs deploy/ecommerce --tail=200</code></pre>
+
+        <h2 style="margin-top:14px;">Artefatos no repositório</h2>
+        <ul class="muted">
+          <li><code>.github/workflows/pipeline.yml</code></li>
+          <li><code>Dockerfile</code></li>
+          <li><code>k8s/app/*.yaml</code></li>
+          <li><code>README.md</code></li>
+        </ul>
+      </aside>
+    </div>
+
+    <footer>
+      <span>Projeto de DevOps</span>
+      <span class="muted">Endpoint atual: <code id="origin"></code></span>
+    </footer>
+  </div>
+
+  <script>
+    document.getElementById("origin").textContent = window.location.origin;
+  </script>
+</body>
+</html>
